@@ -1,0 +1,137 @@
+﻿@page "/Entradas"
+@using AP1GestionInventario.Models
+@using AP1GestionInventario.Services
+@using Microsoft.AspNetCore.Authorization
+@inject EntradaService entradaService
+@inject NavigationManager navigationManager
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Listado de Entradas</PageTitle>
+
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header bg-primary text-white">
+            <h3><i class="bi bi-box-arrow-in-down"></i> Listado de Entradas de Inventario</h3>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label class="form-label">Fecha Desde:</label>
+                    <input type="date" @bind="fechaDesde" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Fecha Hasta:</label>
+                    <input type="date" @bind="fechaHasta" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Filtrar por:</label>
+                    <select @bind="filtro" class="form-select">
+                        <option value="Id">ID</option>
+                        <option value="Concepto">Concepto</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Buscar:</label>
+                    <div class="input-group">
+                        <input @bind="valorFiltro" type="text" class="form-control" placeholder="Valor" />
+                        <button @onclick="Buscar" class="btn btn-outline-primary" type="button">
+                            <i class="bi bi-search"></i> Buscar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <a href="/Entradas/Create" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> Nueva Entrada
+                </a>
+            </div>
+
+            @if (ListaEntradas != null && ListaEntradas.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-hover">
+                        <thead class="table-white">
+                            <tr>
+                                <th>ID</th>
+                                <th>Fecha</th>
+                                <th>Concepto</th>
+                                <th>Total</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entrada in ListaEntradas)
+                            {
+                                <tr>
+                                    <td>@entrada.EntradaId</td>
+                                    <td>@entrada.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td>@entrada.Concepto</td>
+                                    <td>@entrada.Total.ToString("C")</td>
+                                    <td>
+                                        <a href="/Entradas/Edit/@entrada.EntradaId" class="btn btn-warning btn-sm">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="/Entradas/Delete/@entrada.EntradaId" class="btn btn-danger btn-sm">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info text-center">
+                    <i class="bi bi-info-circle"></i> No se encontraron entradas.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    public List<Entrada> ListaEntradas { get; set; } = new List<Entrada>();
+    private string filtro = "Id";
+    private string valorFiltro = "";
+    private DateTime? fechaDesde;
+    private DateTime? fechaHasta;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        ListaEntradas = await entradaService.Listar(e => true);
+    }
+
+    private async Task Buscar()
+    {
+        ListaEntradas = await entradaService.Listar(e => true);
+
+        if (fechaDesde.HasValue)
+        {
+            ListaEntradas = ListaEntradas.Where(e => e.Fecha.Date >= fechaDesde.Value.Date).ToList();
+        }
+
+        if (fechaHasta.HasValue)
+        {
+            ListaEntradas = ListaEntradas.Where(e => e.Fecha.Date <= fechaHasta.Value.Date).ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(valorFiltro))
+        {
+            ListaEntradas = filtro switch
+            {
+                "Id" => ListaEntradas.Where(e => e.EntradaId.ToString().Contains(valorFiltro)).ToList(),
+                "Concepto" => ListaEntradas.Where(e => e.Concepto.ToLower().Contains(valorFiltro.ToLower())).ToList(),
+                _ => ListaEntradas
+            };
+        }
+    }
+}
